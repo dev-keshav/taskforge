@@ -31,6 +31,25 @@ const server = http.createServer(async (req, res) => {
     });
   }
 
+  
+  // GET /jobs/:jobId
+  if (req.method === "GET" && req.url.startsWith("/jobs/")) {
+    const jobId = req.url.split("/")[2];
+
+    // Find job in temporary storage
+    const job = jobs.get(jobId);
+
+    if (!job) {
+      return sendJson(404, {
+        error: "Job not found",
+        jobId,
+      });
+    }
+
+    return sendJson(200, job);
+  }
+
+
   // POST /jobs
   if (req.method === "POST" && req.url === "/jobs") {
     try {
