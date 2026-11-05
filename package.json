@@ -4,11 +4,16 @@
   "description": "A distributed background job processing system built with Node.js and TypeScript",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
-  "private": "true"
+  "private": "true",
+  "dependencies": {
+    "dotenv": "^18.0.9",
+    "pg": "^8.23.1"
+  }
 }
