@@ -1,9 +1,13 @@
 const http = require("node:http");
 const { randomUUID } = require("node:crypto");
+const { publishJob } = require("./src/queue");
 
 const {
   createJob,
   getJobById,
+  markJobRunning,
+  markJobCompleted,
+  markJobFailed
 } = require("./src/job.repository");
 
 const server = http.createServer(async (req, res) => {
@@ -100,6 +104,8 @@ const server = http.createServer(async (req, res) => {
         type: data.type.trim(),
         payload: data.payload,
       });
+
+      await publishJob(job);
 
       return sendJson(202, {
         jobId: job.id,
