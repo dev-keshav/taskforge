@@ -3,12 +3,10 @@ const path = require("node:path");
 
 const pool = require("./db");
 
-const {
-  connectQueue,
-  QUEUE_NAME,
-} = require("./queue");
+const { connectQueue, QUEUE_NAME } = require("./queue");
 
 const {
+  getJobById,
   markJobRunning,
   markJobCompleted,
   markJobFailed,
@@ -23,19 +21,13 @@ async function processJob(job) {
     throw new Error("reportId is required");
   }
 
-  const reportsDirectory = path.join(
-    __dirname,
-    "../storage/reports"
-  );
+  const reportsDirectory = path.join(__dirname, "../storage/reports");
 
   await fs.mkdir(reportsDirectory, {
     recursive: true,
   });
 
-  const artifactPath = path.join(
-    reportsDirectory,
-    `${job.id}.json`
-  );
+  const artifactPath = path.join(reportsDirectory, `${job.id}.json`);
 
   const report = {
     reportId: job.payload.reportId,
@@ -45,11 +37,7 @@ async function processJob(job) {
     message: "TaskForge sample report generated successfully",
   };
 
-  await fs.writeFile(
-    artifactPath,
-    JSON.stringify(report, null, 2),
-    "utf8"
-  );
+  await fs.writeFile(artifactPath, JSON.stringify(report, null, 2), "utf8");
 
   return {
     artifactPath,
@@ -73,6 +61,21 @@ async function startWorker() {
     try {
       job = JSON.parse(message.content.toString());
 
+      // Check whether this job has already been completed.
+      const existingJob = await getJobById(job.id);
+
+      if (!existingJob) {
+        console.error(`Job not found in database: ${job.id}`);
+        channel.ack(message);
+        return;
+      }
+
+      if (existingJob.status === "COMPLETED") {
+        console.log(`Skipping already completed job: ${job.id}`);
+        channel.ack(message);
+        return;
+      }
+
       console.log(`Processing job: ${job.id}`);
 
       await markJobRunning(job.id);
@@ -95,10 +98,7 @@ async function startWorker() {
         // Acknowledge after recording the failure.
         channel.ack(message);
       } catch (databaseError) {
-        console.error(
-          "Could not record job failure:",
-          databaseError.message
-        );
+        console.error("Could not record job failure:", databaseError.message);
 
         // Requeue if PostgreSQL could not record the failure.
         channel.nack(message, false, true);
